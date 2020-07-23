@@ -7,6 +7,7 @@
     <PackageTags>SQL</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <Description>Basic functions for simplification of work with SqlClient.</Description>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
