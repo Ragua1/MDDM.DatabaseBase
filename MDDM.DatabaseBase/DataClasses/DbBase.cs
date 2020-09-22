@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,95 +8,141 @@ using MDDM.DatabaseBase.Interfaces;
 
 namespace MDDM.DatabaseBase.DataClasses
 {
-    public class DbBase : IDbBase
+    public abstract class DbBase : IDbBase
     {
-        protected IsolationLevel DefaultIsolationLevel = IsolationLevel.Unspecified;
+        private readonly IsolationLevel defaultIsolationLevel;
 
         protected readonly string CONN_STRING;
-        private SqlConnection SqlConnection => this.sqlConnection ??= new SqlConnection(CONN_STRING);
-
-        private SqlConnection sqlConnection;
-        private SqlTransaction transaction;
-
-        protected DbBase(string connectionString)
+        protected DbConnection DbConnection { get; set; }
+        protected DbTransaction DbTransaction { get; set; }
+        
+        protected DbBase(string connectionString, IsolationLevel defaultIsolationLevel = IsolationLevel.Unspecified)
         {
             CONN_STRING = connectionString ?? throw new ArgumentNullException($"Argument '{nameof(connectionString)}' cannot be null!");
+            this.defaultIsolationLevel = defaultIsolationLevel;
         }
 
 
         public void OpenConnection()
         {
-            if (this.SqlConnection.State != ConnectionState.Open)
+            if (this.DbConnection.State != ConnectionState.Open)
             {
-                this.SqlConnection.Open();
+                this.DbConnection.Open();
+            }
+        }
+        public async Task OpenConnectionAsync(CancellationToken token = default)
+        {
+            if (this.DbConnection.State != ConnectionState.Open)
+            {
+                await DbConnection.OpenAsync(token).ConfigureAwait(false);
             }
         }
 
         public void CloseConnection()
         {
-            this.transaction = null;
+            this.DbTransaction = null;
 
-            if (this.SqlConnection.State != ConnectionState.Closed)
+            if (this.DbConnection.State != ConnectionState.Closed)
             {
-                this.SqlConnection.Close();
+                this.DbConnection.Close();
             }
         }
 
-        public void BeginTransaction(IsolationLevel? isolationLevel = null, string transactionName = default)
+        public async Task CloseConnectionAsync()
+        {
+            this.DbTransaction = null;
+
+            if (this.DbConnection.State != ConnectionState.Closed)
+            {
+                await DbConnection.CloseAsync().ConfigureAwait(false);
+            }
+        }
+
+        public virtual void BeginTransaction(IsolationLevel? isolationLevel = null)
         {
             OpenConnection();
 
-            this.transaction = this.sqlConnection.BeginTransaction(isolationLevel ?? DefaultIsolationLevel, transactionName);
+            this.DbTransaction = this.DbConnection.BeginTransaction(isolationLevel ?? defaultIsolationLevel);
         }
 
-        public void CommitTransaction()
+        public async Task BeginTransactionAsync(IsolationLevel? isolationLevel = null, CancellationToken token = default)
         {
-            this.transaction.Commit();
+            await OpenConnectionAsync(token).ConfigureAwait(false);
+
+            this.DbTransaction = await DbConnection.BeginTransactionAsync(isolationLevel ?? defaultIsolationLevel, token).ConfigureAwait(false);
+        }
+
+        public virtual void CommitTransaction()
+        {
+            this.DbTransaction.Commit();
             CloseConnection();
         }
 
-        public void RollbackTransaction()
+        public async Task CommitTransactionAsync(CancellationToken token = default)
         {
-            this.transaction?.Rollback();
+            if (DbTransaction != null)
+            {
+                await DbTransaction.CommitAsync(token).ConfigureAwait(false);
+            }
+            await CloseConnectionAsync().ConfigureAwait(false);
+        }
+
+        public virtual void RollbackTransaction()
+        {
+            this.DbTransaction?.Rollback();
             CloseConnection();
         }
 
-        protected T GetValueFromDataReader<T>(SqlDataReader reader, int index, T nullValue = default)
+        public async Task RollbackTransactionAsync(CancellationToken token = default)
+        {
+            if (DbTransaction != null)
+            {
+                await DbTransaction.RollbackAsync(token).ConfigureAwait(false);
+            }
+            await CloseConnectionAsync().ConfigureAwait(false);
+        }
+
+        protected T GetValueFromDataReader<T>(DbDataReader reader, int index, T nullValue = default)
         {
             return reader[index] != DBNull.Value ? ((T)reader[index]) : nullValue;
         }
-        protected async Task<T> GetValueFromDataReaderAsync<T>(SqlDataReader reader, int index, T nullValue = default, CancellationToken cancellationToken = default)
+        protected async Task<T> GetValueFromDataReaderAsync<T>(DbDataReader reader, int index, T nullValue = default, CancellationToken cancellationToken = default)
         {
-            return await reader.IsDBNullAsync(index, cancellationToken)
+            return await reader.IsDBNullAsync(index, cancellationToken).ConfigureAwait(false)
                 ? nullValue
-                : await reader.GetFieldValueAsync<T>(index, cancellationToken);
+                : await reader.GetFieldValueAsync<T>(index, cancellationToken).ConfigureAwait(false);
         }
 
-        protected string GetStringFromDataReader(SqlDataReader reader, string columnName, string nullValue = "")
+        protected string GetStringFromDataReader(DbDataReader reader, string columnName, string nullValue = "")
         {
             return reader[columnName] != DBNull.Value ? ((string)reader[columnName]) : nullValue;
         }
-        protected async Task<string> GetStringFromDataReaderAsync(SqlDataReader reader, string columnName, string nullValue = "", CancellationToken cancellationToken = default)
+        protected async Task<string> GetStringFromDataReaderAsync(DbDataReader reader, string columnName, string nullValue = "", CancellationToken cancellationToken = default)
         {
-            return await reader.IsDBNullAsync(columnName, cancellationToken)
+            return await reader.IsDBNullAsync(columnName, cancellationToken).ConfigureAwait(false)
                 ? nullValue
-                : await reader.GetFieldValueAsync<string>(columnName, cancellationToken);
+                : await reader.GetFieldValueAsync<string>(columnName, cancellationToken).ConfigureAwait(false);
         }
-        protected DateTime GetDateTimeFromDataReader(SqlDataReader reader, string columnName, DateTime nullValue = default)
+        protected DateTime GetDateTimeFromDataReader(DbDataReader reader, string columnName, DateTime nullValue = default)
         {
             return GetDateTimeFromDataReaderNullable(reader, columnName) ?? nullValue;
         }
-        protected T GetValueFromDataReader<T>(SqlDataReader reader, string columnName, T nullValue = default) where T : struct
+        protected T GetValueFromDataReader<T>(DbDataReader reader, string columnName, T nullValue = default) where T : struct
         {
             return GetValueFromDataReaderNullable<T>(reader, columnName) ?? nullValue;
         }
-        protected async Task<T> GetValueFromDataReaderAsync<T>(SqlDataReader reader, string columnName, T nullValue = default, CancellationToken cancellationToken = default) where T : struct
+        protected async Task<T> GetValueFromDataReaderAsync<T>(DbDataReader reader, string columnName, T nullValue = default, CancellationToken cancellationToken = default) where T : struct
         {
-            return await GetValueFromDataReaderNullableAsync<T>(reader, columnName, cancellationToken) ?? nullValue;
+            return await GetValueFromDataReaderNullableAsync<T>(reader, columnName, cancellationToken).ConfigureAwait(false) ?? nullValue;
         }
 
-        protected DateTime? GetDateTimeFromDataReaderNullable(SqlDataReader reader, string columnName)
+        protected DateTime? GetDateTimeFromDataReaderNullable(DbDataReader reader, string columnName)
         {
+            if (reader == null)
+            {
+                return null;
+            }
+
             var colValue = reader[columnName];
             if (colValue != DBNull.Value)
             {
@@ -106,8 +153,13 @@ namespace MDDM.DatabaseBase.DataClasses
                 return null;
             }
         }
-        protected T? GetValueFromDataReaderNullable<T>(SqlDataReader reader, string columnName) where T : struct
+        protected T? GetValueFromDataReaderNullable<T>(DbDataReader reader, string columnName) where T : struct
         {
+            if (reader == null)
+            {
+                return null;
+            }
+
             var colValue = reader[columnName];
             if (colValue != DBNull.Value)
             {
@@ -118,26 +170,31 @@ namespace MDDM.DatabaseBase.DataClasses
                 return null;
             }
         }
-        protected async Task<T?> GetValueFromDataReaderNullableAsync<T>(SqlDataReader reader, string columnName, CancellationToken cancellationToken = default) where T : struct
+        protected async Task<T?> GetValueFromDataReaderNullableAsync<T>(DbDataReader reader, string columnName, CancellationToken cancellationToken = default) where T : struct
         {
-            return !await reader.IsDBNullAsync(columnName, cancellationToken)
-                ? (T?) await reader.GetFieldValueAsync<T>(columnName, cancellationToken)
+            return !await reader.IsDBNullAsync(columnName, cancellationToken).ConfigureAwait(false)
+                ? (T?) await reader.GetFieldValueAsync<T>(columnName, cancellationToken).ConfigureAwait(false)
                 : null;
         }
 
-        protected async Task<SqlDataReader> ExecuteProcedureCommandAsync(SqlCommand command, CancellationToken token = default)
+        protected async Task<DbDataReader> ExecuteProcedureCommandAsync(DbCommand command, CancellationToken token = default)
         {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
             // use the connection here
-            command.Connection = this.SqlConnection;
+            command.Connection = this.DbConnection;
             command.CommandType = CommandType.StoredProcedure;
-            command.Transaction = this.transaction; // null if not transaction
+            command.Transaction = this.DbTransaction; // null if not transaction
 
             if (command.Connection.State != ConnectionState.Open)
             {
-                await command.Connection.OpenAsync(token);
+                await command.Connection.OpenAsync(token).ConfigureAwait(false);
             }
 
-            var commandBehavior = this.transaction != null
+            var commandBehavior = this.DbTransaction != null
                 ? CommandBehavior.Default
                 : CommandBehavior.CloseConnection;
             
@@ -146,10 +203,15 @@ namespace MDDM.DatabaseBase.DataClasses
                 token).ConfigureAwait(false);
         }
 
-        protected SqlDataReader ExecuteProcedureCommand(SqlCommand command)
+        protected DbDataReader ExecuteProcedureCommand(DbCommand command)
         {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
             // use the connection here
-            command.Connection = this.SqlConnection;
+            command.Connection = this.DbConnection;
             command.CommandType = CommandType.StoredProcedure;
 
             if (command.Connection.State != ConnectionState.Open)
@@ -160,25 +222,35 @@ namespace MDDM.DatabaseBase.DataClasses
             return command.ExecuteReader(CommandBehavior.CloseConnection);
         }
 
-        protected async Task<SqlDataReader> ExecuteSelectCommandAsync(SqlCommand command, CancellationToken token = default)
+        protected async Task<DbDataReader> ExecuteSelectCommandAsync(DbCommand command, CancellationToken token = default)
         {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
             // use the connection here
             command.Connection = new SqlConnection(CONN_STRING); // nevytvaret novou instanci
             command.CommandType = CommandType.Text;
 
             if (command.Connection.State != ConnectionState.Open)
             {
-                await command.Connection.OpenAsync(token);
+                await command.Connection.OpenAsync(token).ConfigureAwait(false);
             }
 
 
             return await command.ExecuteReaderAsync(CommandBehavior.CloseConnection, token).ConfigureAwait(false);
         }
 
-        protected SqlDataReader ExecuteSelectCommand(SqlCommand command)
+        protected DbDataReader ExecuteSelectCommand(DbCommand command)
         {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
             // use the connection here
-            command.Connection = this.SqlConnection;
+            command.Connection = this.DbConnection;
             command.CommandType = CommandType.Text;
 
             OpenConnection();
@@ -191,12 +263,17 @@ namespace MDDM.DatabaseBase.DataClasses
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>ID of inserted row</returns>
-        protected int ExecuteInsertCommand(SqlCommand command)
+        protected int ExecuteInsertCommand(DbCommand command)
         {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
             // use the connection here
-            command.Connection = this.SqlConnection;
+            command.Connection = this.DbConnection;
             command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
+            command.Transaction = this.DbTransaction;
 
             OpenConnection();
 
@@ -208,26 +285,36 @@ namespace MDDM.DatabaseBase.DataClasses
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>Count of affected rows</returns>
-        protected int ExecuteAdjustCommand(SqlCommand command)
+        protected int ExecuteAdjustCommand(DbCommand command)
         {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
             // use the connection here
-            command.Connection = this.SqlConnection;
+            command.Connection = this.DbConnection;
             command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
+            command.Transaction = this.DbTransaction;
 
             OpenConnection();
             
             return command.ExecuteNonQuery();
         }
 
-        protected async Task<int> ExecuteAdjustCommandAsync(SqlCommand command, CancellationToken token = default)
+        protected async Task<int> ExecuteAdjustCommandAsync(DbCommand command, CancellationToken token = default)
         {
-            // use the connection here
-            command.Connection = this.SqlConnection;
-            command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
 
-            OpenConnection();
+            // use the connection here
+            command.Connection = this.DbConnection;
+            command.CommandType = CommandType.Text;
+            command.Transaction = this.DbTransaction;
+
+            await OpenConnectionAsync(token).ConfigureAwait(false);
             
             return await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
         }

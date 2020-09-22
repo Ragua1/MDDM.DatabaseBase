@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.2</Version>
+    <PackageProjectUrl>https://github.com/Ragua1/MDDM.DatabaseBase</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Ragua1/MDDM.DatabaseBase</RepositoryUrl>
+    <Authors>Martin Domanský</Authors>
+    <Company>MDDM</Company>
+    <Description>Basic functions for simplification of work with OracleClient.</Description>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageTags>SQL, Oracle</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.90" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MDDM.DatabaseBase\MDDM.DatabaseBase.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
