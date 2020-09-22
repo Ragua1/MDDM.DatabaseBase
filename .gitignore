@@ -9,3 +9,5 @@
 /MDDM.DatabaseBase/bin
 /MDDM.DatabaseBase.Oracle/bin/Debug/netcoreapp3.1
 /MDDM.DatabaseBase.Oracle/obj
+/MDDM.DatabaseBase.Oracle/bin/Release/netcoreapp3.1/publish
+/MDDM.DatabaseBase.Oracle/bin/Release

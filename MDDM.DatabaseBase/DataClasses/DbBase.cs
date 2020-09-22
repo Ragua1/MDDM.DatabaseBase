@@ -30,13 +30,13 @@ namespace MDDM.DatabaseBase.DataClasses
                 this.DbConnection.Open();
             }
         }
-        public async Task OpenConnectionAsync(CancellationToken token = default)
-        {
-            if (this.DbConnection.State != ConnectionState.Open)
-            {
-                await DbConnection.OpenAsync(token).ConfigureAwait(false);
-            }
-        }
+        //public async Task OpenConnectionAsync(CancellationToken token = default)
+        //{
+        //    if (this.DbConnection.State != ConnectionState.Open)
+        //    {
+        //        await DbConnection.OpenAsync(token).ConfigureAwait(false);
+        //    }
+        //}
 
         public void CloseConnection()
         {
@@ -48,15 +48,15 @@ namespace MDDM.DatabaseBase.DataClasses
             }
         }
 
-        public async Task CloseConnectionAsync()
-        {
-            this.DbTransaction = null;
+        //public async Task CloseConnectionAsync()
+        //{
+        //    this.DbTransaction = null;
 
-            if (this.DbConnection.State != ConnectionState.Closed)
-            {
-                await DbConnection.CloseAsync().ConfigureAwait(false);
-            }
-        }
+        //    if (this.DbConnection.State != ConnectionState.Closed)
+        //    {
+        //        await DbConnection.CloseAsync().ConfigureAwait(false);
+        //    }
+        //}
 
         public virtual void BeginTransaction(IsolationLevel? isolationLevel = null)
         {
@@ -67,7 +67,7 @@ namespace MDDM.DatabaseBase.DataClasses
 
         public async Task BeginTransactionAsync(IsolationLevel? isolationLevel = null, CancellationToken token = default)
         {
-            await OpenConnectionAsync(token).ConfigureAwait(false);
+            OpenConnection();
 
             this.DbTransaction = await DbConnection.BeginTransactionAsync(isolationLevel ?? defaultIsolationLevel, token).ConfigureAwait(false);
         }
@@ -84,7 +84,7 @@ namespace MDDM.DatabaseBase.DataClasses
             {
                 await DbTransaction.CommitAsync(token).ConfigureAwait(false);
             }
-            await CloseConnectionAsync().ConfigureAwait(false);
+            CloseConnection();
         }
 
         public virtual void RollbackTransaction()
@@ -99,7 +99,7 @@ namespace MDDM.DatabaseBase.DataClasses
             {
                 await DbTransaction.RollbackAsync(token).ConfigureAwait(false);
             }
-            await CloseConnectionAsync().ConfigureAwait(false);
+            CloseConnection();
         }
 
         protected T GetValueFromDataReader<T>(DbDataReader reader, int index, T nullValue = default)
@@ -235,7 +235,7 @@ namespace MDDM.DatabaseBase.DataClasses
 
             if (command.Connection.State != ConnectionState.Open)
             {
-                await command.Connection.OpenAsync(token).ConfigureAwait(false);
+                command.Connection.Open();
             }
 
 
@@ -314,7 +314,7 @@ namespace MDDM.DatabaseBase.DataClasses
             command.CommandType = CommandType.Text;
             command.Transaction = this.DbTransaction;
 
-            await OpenConnectionAsync(token).ConfigureAwait(false);
+            OpenConnection();
             
             return await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
         }

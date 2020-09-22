@@ -7,9 +7,9 @@ namespace MDDM.DatabaseBase.Interfaces
     public interface IDbBase
     {
         void OpenConnection();
-        Task OpenConnectionAsync(CancellationToken token = default);
+        //Task OpenConnectionAsync(CancellationToken token = default);
         void CloseConnection();
-        Task CloseConnectionAsync();
+        //Task CloseConnectionAsync();
         void BeginTransaction(IsolationLevel? isolationLevel = null);
         Task BeginTransactionAsync(IsolationLevel? isolationLevel = null, CancellationToken token = default);
         void CommitTransaction();
