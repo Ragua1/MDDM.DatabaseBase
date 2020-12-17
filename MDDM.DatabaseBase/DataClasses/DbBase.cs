@@ -8,18 +8,22 @@ using MDDM.DatabaseBase.Interfaces;
 
 namespace MDDM.DatabaseBase.DataClasses
 {
-    public abstract class DbBase : IDbBase
+    public abstract class DbBase : IDbBase, IDisposable
     {
         private readonly IsolationLevel defaultIsolationLevel;
 
         protected readonly string CONN_STRING;
         protected DbConnection DbConnection { get; set; }
         protected DbTransaction DbTransaction { get; set; }
+
+        protected Action DisposeAction; 
         
         protected DbBase(string connectionString, IsolationLevel defaultIsolationLevel = IsolationLevel.Unspecified)
         {
             CONN_STRING = connectionString ?? throw new ArgumentNullException($"Argument '{nameof(connectionString)}' cannot be null!");
             this.defaultIsolationLevel = defaultIsolationLevel;
+
+            DisposeAction = OpenConnection;
         }
 
 
@@ -317,6 +321,11 @@ namespace MDDM.DatabaseBase.DataClasses
             OpenConnection();
             
             return await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+        }
+
+        public void Dispose()
+        {
+             DisposeAction?.Invoke();
         }
     }
 }
