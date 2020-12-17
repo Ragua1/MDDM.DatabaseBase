@@ -23,7 +23,7 @@ namespace MDDM.DatabaseBase.DataClasses
             CONN_STRING = connectionString ?? throw new ArgumentNullException($"Argument '{nameof(connectionString)}' cannot be null!");
             this.defaultIsolationLevel = defaultIsolationLevel;
 
-            DisposeAction = OpenConnection;
+            DisposeAction = CloseConnection;
         }
 
 
