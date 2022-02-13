@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using MDDM.DatabaseBase.Test.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

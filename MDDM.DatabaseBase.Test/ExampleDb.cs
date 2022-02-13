@@ -1,7 +1,5 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
-using System.Threading.Tasks;
 using MDDM.DatabaseBase.DataClasses;
 using MDDM.DatabaseBase.Test.Models;
 
@@ -17,9 +15,9 @@ namespace MDDM.DatabaseBase.Test
         {
             var cmd = new SqlCommand("INSERT INTO [Table_1] ([ColText], [ColInt], [ColDate]) VALUES (@ColText, @ColInt, @ColDate); SELECT SCOPE_IDENTITY() ");
 
-            cmd.Parameters.AddWithValue("ColText", (object)data?.ColText ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("ColInt", (object)data?.ColInt ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("ColDate", (object)data?.ColDate ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("ColText", (object?)data.ColText ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("ColInt", (object?)data.ColInt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("ColDate", (object?)data.ColDate ?? DBNull.Value);
 
             var newId = ExecuteInsertCommand(cmd);
             return Convert.ToInt32(newId);
@@ -29,9 +27,9 @@ namespace MDDM.DatabaseBase.Test
         {
             var cmd = new SqlCommand("INSERT INTO [Table_1] ([ColText], [ColInt], [ColDate]) VALUES (@ColText, @ColInt, @ColDate); SELECT SCOPE_IDENTITY() ");
 
-            cmd.Parameters.AddWithValue("ColText", (object)data?.ColText ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("ColInt", (object)data?.ColInt ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("ColDate", (object)data?.ColDate ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("ColText", (object?)data.ColText ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("ColInt", (object?)data.ColInt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("ColDate", (object?)data.ColDate ?? DBNull.Value);
 
             var newId = await ExecuteInsertCommandAsync(cmd);
             return Convert.ToInt32(newId);
@@ -39,7 +37,7 @@ namespace MDDM.DatabaseBase.Test
 
         internal Table_1? SelectData(int id)
         {
-            var cmd = new SqlCommand("SELECT [Id], [ColText], [ColInt], [ColDate] FROM [Table_1] WHERE Id = @Id");
+            var cmd = new SqlCommand("SELECT [Id], [Updated], [ColText], [ColInt], [ColDate] FROM [Table_1] WHERE Id = @Id");
             cmd.Parameters.AddWithValue("Id", id);
 
             var reader = ExecuteSelectCommand(cmd);
@@ -47,10 +45,11 @@ namespace MDDM.DatabaseBase.Test
             {
                 var data = new Table_1
                 {
-                    Id = GetValueFromDataReader(reader, "Id", -1),
-                    ColText = GetStringFromDataReader(reader, "ColText"),
-                    ColInt = GetValueFromDataReader(reader, "ColInt", -1),
-                    ColDate = GetDateTimeFromDataReader(reader, "ColDate"),
+                    Id = GetValueFromDataReader(reader, nameof(Table_1.Id), -1),
+                    Updated = GetDateTimeFromDataReader(reader, nameof(Table_1.Updated)),
+                    ColText = GetStringFromDataReader(reader, nameof(Table_1.ColText)),
+                    ColInt = GetValueFromDataReader(reader, nameof(Table_1.ColInt), -1),
+                    ColDate = GetDateTimeFromDataReader(reader, nameof(Table_1.ColDate)),
                 };
                 return data;
             }
@@ -60,7 +59,7 @@ namespace MDDM.DatabaseBase.Test
 
         internal async Task<Table_1?> SelectDataAsync(int id)
         {
-            var cmd = new SqlCommand("SELECT [Id], [ColText], [ColInt], [ColDate] FROM [Table_1] WHERE Id = @Id");
+            var cmd = new SqlCommand("SELECT [Id], [Updated], [ColText], [ColInt], [ColDate] FROM [Table_1] WHERE Id = @Id");
             cmd.Parameters.AddWithValue("Id", id);
 
             var reader = await ExecuteSelectCommandAsync(cmd);
@@ -68,10 +67,11 @@ namespace MDDM.DatabaseBase.Test
             {
                 var data = new Table_1
                 {
-                    Id = await GetValueFromDataReaderAsync(reader, "Id", -1),
-                    ColText = await GetStringFromDataReaderAsync(reader, "ColText"),
-                    ColInt = await GetValueFromDataReaderNullableAsync<int>(reader, "ColInt"),
-                    ColDate = await GetDateTimeFromDataReaderNullableAsync(reader, "ColDate"),
+                    Id = await GetValueFromDataReaderAsync(reader, nameof(Table_1.Id), -1),
+                    Updated = await GetDateTimeFromDataReaderAsync(reader, nameof(Table_1.Updated)),
+                    ColText = await GetStringFromDataReaderAsync(reader, nameof(Table_1.ColText)),
+                    ColInt = await GetValueFromDataReaderNullableAsync<int>(reader, nameof(Table_1.ColInt)),
+                    ColDate = await GetDateTimeFromDataReaderNullableAsync(reader, nameof(Table_1.ColDate)),
                 };
                 return data;
             }

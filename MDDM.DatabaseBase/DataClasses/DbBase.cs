@@ -1,9 +1,6 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-using System.Threading;
-using System.Threading.Tasks;
 using MDDM.DatabaseBase.Interfaces;
 
 namespace MDDM.DatabaseBase.DataClasses
@@ -14,13 +11,15 @@ namespace MDDM.DatabaseBase.DataClasses
 
         protected readonly string CONN_STRING;
         protected DbConnection DbConnection { get; set; }
-        protected DbTransaction DbTransaction { get; set; }
+        protected DbTransaction? DbTransaction { get; set; }
 
         protected Action DisposeAction; 
         
         protected DbBase(string connectionString, IsolationLevel defaultIsolationLevel = IsolationLevel.Unspecified)
         {
-            CONN_STRING = connectionString ?? throw new ArgumentNullException($"Argument '{nameof(connectionString)}' cannot be null!");
+            ArgumentNullException.ThrowIfNull(connectionString, nameof(connectionString));
+
+            CONN_STRING = connectionString;
             this.defaultIsolationLevel = defaultIsolationLevel;
 
             DisposeAction = CloseConnection;
@@ -131,6 +130,10 @@ namespace MDDM.DatabaseBase.DataClasses
         {
             return GetDateTimeFromDataReaderNullable(reader, columnName, dateTimeKind) ?? nullValue;
         }
+        protected async Task<DateTime> GetDateTimeFromDataReaderAsync(DbDataReader reader, string columnName, DateTimeKind dateTimeKind = DateTimeKind.Utc, DateTime nullValue = default)
+        {
+            return await GetDateTimeFromDataReaderNullableAsync(reader, columnName, dateTimeKind) ?? nullValue;
+        }
         protected T GetValueFromDataReader<T>(DbDataReader reader, string columnName, T nullValue = default) where T : struct
         {
             return GetValueFromDataReaderNullable<T>(reader, columnName) ?? nullValue;
@@ -159,12 +162,7 @@ namespace MDDM.DatabaseBase.DataClasses
         }
         protected async Task<DateTime?> GetDateTimeFromDataReaderNullableAsync(DbDataReader reader, string columnName, DateTimeKind dateTimeKind = DateTimeKind.Utc, CancellationToken cancellationToken = default)
         {
-            if (reader == null)
-            {
-                return null;
-            }
-
-            if (await reader.IsDBNullAsync(columnName, cancellationToken).ConfigureAwait(false))
+            if (reader == null || await reader.IsDBNullAsync(columnName, cancellationToken).ConfigureAwait(false))
             {
                 return null;
             }

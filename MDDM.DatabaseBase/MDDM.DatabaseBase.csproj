@@ -7,11 +7,13 @@
     <PackageTags>SQL</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <Description>Basic functions for simplification of work with SqlClient.</Description>
-    <Version>1.0.4.1</Version>
+    <Version>1.0.4.2</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/Ragua1/MDDM.DatabaseBase</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Ragua1/MDDM.DatabaseBase</RepositoryUrl>
     <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

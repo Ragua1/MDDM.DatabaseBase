@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.4.1</Version>
+    <Version>1.0.4.2</Version>
     <PackageProjectUrl>https://github.com/Ragua1/MDDM.DatabaseBase</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Ragua1/MDDM.DatabaseBase</RepositoryUrl>
     <Authors>Martin Domanský</Authors>
@@ -11,6 +11,8 @@
     <Description>Basic functions for simplification of work with OracleClient.</Description>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageTags>SQL, Oracle</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
