@@ -127,9 +127,9 @@ namespace MDDM.DatabaseBase.DataClasses
                 ? nullValue
                 : await reader.GetFieldValueAsync<string>(columnName, cancellationToken).ConfigureAwait(false);
         }
-        protected DateTime GetDateTimeFromDataReader(DbDataReader reader, string columnName, DateTime nullValue = default)
+        protected DateTime GetDateTimeFromDataReader(DbDataReader reader, string columnName, DateTimeKind dateTimeKind = DateTimeKind.Utc, DateTime nullValue = default)
         {
-            return GetDateTimeFromDataReaderNullable(reader, columnName) ?? nullValue;
+            return GetDateTimeFromDataReaderNullable(reader, columnName, dateTimeKind) ?? nullValue;
         }
         protected T GetValueFromDataReader<T>(DbDataReader reader, string columnName, T nullValue = default) where T : struct
         {
@@ -140,7 +140,7 @@ namespace MDDM.DatabaseBase.DataClasses
             return await GetValueFromDataReaderNullableAsync<T>(reader, columnName, cancellationToken).ConfigureAwait(false) ?? nullValue;
         }
 
-        protected DateTime? GetDateTimeFromDataReaderNullable(DbDataReader reader, string columnName)
+        protected DateTime? GetDateTimeFromDataReaderNullable(DbDataReader reader, string columnName, DateTimeKind dateTimeKind = DateTimeKind.Utc)
         {
             if (reader == null)
             {
@@ -150,12 +150,27 @@ namespace MDDM.DatabaseBase.DataClasses
             var colValue = reader[columnName];
             if (colValue != DBNull.Value)
             {
-                return DateTime.SpecifyKind((DateTime)colValue, DateTimeKind.Utc);
+                return DateTime.SpecifyKind((DateTime)colValue, dateTimeKind);
             }
             else
             {
                 return null;
             }
+        }
+        protected async Task<DateTime?> GetDateTimeFromDataReaderNullableAsync(DbDataReader reader, string columnName, DateTimeKind dateTimeKind = DateTimeKind.Utc, CancellationToken cancellationToken = default)
+        {
+            if (reader == null)
+            {
+                return null;
+            }
+
+            if (await reader.IsDBNullAsync(columnName, cancellationToken).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            var colValue = await reader.GetFieldValueAsync<DateTime>(columnName, cancellationToken).ConfigureAwait(false);
+            return DateTime.SpecifyKind(colValue, dateTimeKind);
         }
         protected T? GetValueFromDataReaderNullable<T>(DbDataReader reader, string columnName) where T : struct
         {
@@ -267,7 +282,7 @@ namespace MDDM.DatabaseBase.DataClasses
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>ID of inserted row</returns>
-        protected int ExecuteInsertCommand(DbCommand command)
+        protected decimal ExecuteInsertCommand(DbCommand command)
         {
             if (command == null)
             {
@@ -281,7 +296,23 @@ namespace MDDM.DatabaseBase.DataClasses
 
             OpenConnection();
 
-            return (int)(command.ExecuteScalar() ?? -1);
+            return (decimal)(command.ExecuteScalar() ?? -1);
+        }
+        protected async Task<decimal> ExecuteInsertCommandAsync(DbCommand command)
+        {
+            if (command == null)
+            {
+                throw new NullReferenceException("Command cannot be null!");
+            }
+
+            // use the connection here
+            command.Connection = this.DbConnection;
+            command.CommandType = CommandType.Text;
+            command.Transaction = this.DbTransaction;
+
+            OpenConnection();
+
+            return (decimal)(await command.ExecuteScalarAsync().ConfigureAwait(false) ?? -1);
         }
 
         /// <summary>
